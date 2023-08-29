@@ -12,7 +12,7 @@ class PriceService(val driver: WebDriver) {
 
     //se1-lulea
     //se2-sundsvall
-    //s3-stockholm
+    //se3-stockholm
     //se4-malmo
 
 
@@ -22,7 +22,6 @@ class PriceService(val driver: WebDriver) {
 
     @Scheduled()
     fun getTodayPricesFromElbruk(region: String) {
-
         driver.get("https://www.elbruk.se/timpriser-$region")
         driver.manage().timeouts().implicitlyWait(Duration.ofMillis(LATENCY_MILLIS))
 
@@ -35,7 +34,7 @@ class PriceService(val driver: WebDriver) {
         val elements =
             getTableElements(sizes["Rows"]!!, sizes["Columns"]!!,"/html/body/div/div[8]/div/div/div/table/tbody")
 
-        driver.quit()
+
     }
 
     @Scheduled()

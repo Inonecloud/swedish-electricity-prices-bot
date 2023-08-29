@@ -26,6 +26,7 @@ class WebDriverConfig {
         chromeOptions.addArguments("--no-sandbox")
         chromeOptions.addArguments("--disable-dev-shm-usage")
         chromeOptions.addArguments("--headless")
+        System.setProperty("webdriver.chrome.whitelistedIps", "");
         return ChromeDriver(chromeOptions)
     }
 

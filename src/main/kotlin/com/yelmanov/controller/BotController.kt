@@ -30,7 +30,7 @@ class BotController(val bot: TelegramBot, val priceService: PriceService) {
     @PostConstruct
      fun init() {
         println("Hello")
-        priceService.getTodayPricesFromElbruk("s3-stockholm")
+        priceService.getTodayPricesFromElbruk("se3-stockholm")
     }
 
     @EventListener
