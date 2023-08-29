@@ -21,6 +21,9 @@ repositories {
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.jetbrains.kotlin:kotlin-reflect'
+    implementation 'dev.inmo:tgbotapi:9.1.0'
+    implementation 'org.seleniumhq.selenium:selenium-java:4.11.0'
+    implementation 'io.github.bonigarcia:webdrivermanager:5.5.2'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 
