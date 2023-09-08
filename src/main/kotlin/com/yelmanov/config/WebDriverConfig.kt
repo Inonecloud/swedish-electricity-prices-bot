@@ -1,25 +1,30 @@
 package com.yelmanov.config
 
-import dev.inmo.tgbotapi.bot.TelegramBot
-import dev.inmo.tgbotapi.extensions.api.telegramBot
+import com.yelmanov.telegram.service.BotService
 import io.github.bonigarcia.wdm.WebDriverManager
 import org.openqa.selenium.WebDriver
 import org.openqa.selenium.chrome.ChromeDriver
 import org.openqa.selenium.chrome.ChromeOptions
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.beans.factory.config.ConfigurableBeanFactory
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Scope
+import org.springframework.scheduling.annotation.EnableScheduling
+import org.telegram.telegrambots.meta.TelegramBotsApi
+import org.telegram.telegrambots.updatesreceivers.DefaultBotSession
 
 
 @Configuration
+@EnableScheduling
 class WebDriverConfig {
 
 
-    @Value("\${botToken}")
+    @Value("\${bot.token}")
     lateinit var botToken: String
 
     @Bean
+    @Scope(value = ConfigurableBeanFactory.SCOPE_PROTOTYPE)
     fun getDriver(): WebDriver {
         WebDriverManager.chromedriver().setup()
         val chromeOptions = ChromeOptions()
@@ -31,8 +36,8 @@ class WebDriverConfig {
     }
 
     @Bean
-    fun bot(): TelegramBot {
-        return telegramBot(botToken)
-    }
-
+    fun telegramBotsApi(bot: BotService): TelegramBotsApi =
+        TelegramBotsApi(DefaultBotSession::class.java).apply {
+            registerBot(bot)
+        }
 }
