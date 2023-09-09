@@ -10,7 +10,7 @@ class BotMessageService(
     private val token: String
 ) {
 
-    fun sendMessage(message: String, chatId: String) {
+    fun sendMessage(message: String, chatId: Long) {
 
         val restTemplate = RestTemplate()
         val forObject = restTemplate.getForObject(

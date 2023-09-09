@@ -1,6 +1,8 @@
 package com.yelmanov.service
 
 import com.yelmanov.domain.Regions
+import com.yelmanov.domain.User
+import com.yelmanov.repository.PriceRepository
 import com.yelmanov.service.mapper.convertElementsToPrices
 import com.yelmanov.telegram.service.BotMessageService
 import org.openqa.selenium.By
@@ -14,7 +16,8 @@ import java.time.LocalDate
 @Scope("prototype")
 class PriceService(
     val driver: WebDriver,
-    val botMessageService: BotMessageService
+    val botMessageService: BotMessageService,
+    val priceRepository: PriceRepository
 ) {
 
 
@@ -23,33 +26,45 @@ class PriceService(
         const val DAY_HOURS = 24
     }
 
-    fun getTodayPricesFromElbruk() {
-        val region = Regions.SE3.regionName
-        driver.get("https://www.elbruk.se/timpriser-$region")
-        driver.manage().timeouts().implicitlyWait(Duration.ofMillis(LATENCY_MILLIS))
+    fun getTodayPricesFromElbruk(user: User) {
+        val region = user.region.regionName
+        val existingPrices = priceRepository.findAllByRegion(user.region)
+        if (existingPrices.isEmpty()) {
+            driver.get("https://www.elbruk.se/timpriser-$region")
+            driver.manage().timeouts().implicitlyWait(Duration.ofMillis(LATENCY_MILLIS))
 
-        submitCookies()
+            submitCookies()
 
-        val sizes = getTableSize(
-            "/html/body/div/div[8]/div/div/div/table/thead/tr/th",
-            "/html/body/div/div[8]/div/div/div/table/tbody/tr/td[1]"
-        )
-        val elements =
-            getTableElements(sizes["Rows"]!!, sizes["Columns"]!!, "/html/body/div/div[8]/div/div/div/table/tbody")
+            val sizes = getTableSize(
+                "/html/body/div/div[8]/div/div/div/table/thead/tr/th",
+                "/html/body/div/div[8]/div/div/div/table/tbody/tr/td[1]"
+            )
+            val elements =
+                getTableElements(sizes["Rows"]!!, sizes["Columns"]!!, "/html/body/div/div[8]/div/div/div/table/tbody")
 
 
-        //   driver.close()
-        val prices = convertElementsToPrices(elements, sizes["Columns"]!!)
+            //   driver.close()
+            val prices = convertElementsToPrices(elements, sizes["Columns"]!!, Regions.SE3)
+            priceRepository.save(prices)
+
+            botMessageService.sendMessage(
+                "*Prices for ${LocalDate.now()}:*\n${
+                    prices.toString().replace("[", "").replace("]", "").replace(",", "")
+                }".replace("-", "\\-"), user.chatId
+            )
+            return
+        }
         botMessageService.sendMessage(
             "*Prices for ${LocalDate.now()}:*\n${
-                prices.toString().replace("[", "").replace("]", "").replace(",", "")
-            }".replace("-", "\\-"), "162300020"
+                existingPrices.toString().replace("[", "").replace("]", "").replace(",", "")
+            }".replace("-", "\\-"), user.chatId
         )
+
 
     }
 
-    fun getTomorrowPricesFromElbruck() {
-        val regionNumber = Regions.SE3.regionNumber
+    fun getTomorrowPricesFromElbruck(user: User) {
+        val regionNumber = user.region.regionNumber
         driver.get("https://www.elbruk.se/planera-elforbrukning?e=$regionNumber")
         driver.manage().timeouts().implicitlyWait(Duration.ofMillis(LATENCY_MILLIS))
         submitCookies()
@@ -68,11 +83,11 @@ class PriceService(
                 .skip(sizes["Rows"]!!.minus(DAY_HOURS).times(sizes["Columns"]!!).toLong())
                 .toList()
         }
-        val prices = convertElementsToPrices(elements, sizes["Columns"]!!)
+        val prices = convertElementsToPrices(elements, sizes["Columns"]!!, Regions.SE3)
         botMessageService.sendMessage(
             "*Prices for ${LocalDate.now().plusDays(1)}:*\n${
                 prices.toString().replace("[", "").replace("]", "").replace(",", "")
-            }".replace("-", "\\-"), "162300020"
+            }".replace("-", "\\-"), 162300020
         )
 
 
