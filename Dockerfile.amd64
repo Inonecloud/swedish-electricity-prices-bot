@@ -1,0 +1,46 @@
+# Use an official base image that includes wget and unzip
+FROM ubuntu:20.04
+
+# Set an environment variable for ChromeDriver version
+ENV CHROMEDRIVER_VERSION=117.0.5938.92
+
+# Install wget and unzip
+RUN apt-get update && apt-get install -y wget unzip
+
+# Install OpenJDK 17
+RUN apt-get install -y openjdk-17-jdk
+
+# Install gnupg to support apt-key
+RUN apt-get install -y gnupg
+
+# Install Chrome
+RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
+RUN sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list'
+RUN apt-get update -y
+RUN apt-get install -y google-chrome-stable
+
+# Download ChromeDriver and unzip it
+RUN CHROMEDRIVER_VERSION=114.0.5735.16 && \
+    wget -q "https://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip" && \
+    unzip chromedriver_linux64.zip -d /usr/local/bin/ && \
+    chmod +x /usr/local/bin/chromedriver
+
+# Set an environment variable to specify ChromeDriver's location
+ENV CHROMEDRIVER_PATH /usr/local/bin/chromedriver
+
+# Set Java environment variables
+ENV JAVA_HOME /usr/lib/jvm/java-17-openjdk-amd64
+ENV PATH $PATH:$JAVA_HOME/bin
+
+ENV DISPLAY=:99
+
+# Set the working directory inside the container
+WORKDIR /app
+
+# Copy your application's JAR file to the container (replace 'your-app.jar' with your JAR filename)
+COPY build/libs/electricity-prices-0.0.1-SNAPSHOT.jar ./app.jar
+# Expose any necessary ports (e.g., if your Selenium server is running on a specific port)
+EXPOSE 8080
+
+# Command to run your Java application (replace 'your-app.jar' with your JAR filename)
+CMD ["java", "-jar", "app.jar"]
