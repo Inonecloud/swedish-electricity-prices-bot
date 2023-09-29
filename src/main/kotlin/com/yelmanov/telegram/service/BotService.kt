@@ -44,7 +44,7 @@ class BotService(
                                 "\n First of all you should choose your region"
                     }
 
-                    text == "/get" -> get(chatId)
+                    text == "/today" -> get(chatId)
 
                     text == "/tomorrow" -> tomorrow(chatId)
                     else -> text
@@ -60,6 +60,7 @@ class BotService(
             var user = userService.getUserByChatId(chatId)
             user.region = Regions.valueOf(callback.data)
             userService.saveUser(user)
+            priceService.getTodayPricesFromElbruk(user)
         }
     }
 

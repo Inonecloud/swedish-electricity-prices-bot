@@ -7,6 +7,7 @@ import com.yelmanov.service.mapper.convertElementsToPrices
 import com.yelmanov.telegram.service.BotMessageService
 import org.openqa.selenium.By
 import org.openqa.selenium.WebDriver
+import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Service
 import java.time.Duration
@@ -19,31 +20,33 @@ class PriceService(
     val botMessageService: BotMessageService,
     val priceRepository: PriceRepository
 ) {
-
+    private val logger = LoggerFactory.getLogger(javaClass)
 
     companion object {
-        const val LATENCY_MILLIS: Long = 200
+        const val LATENCY_MILLIS: Long = 300
         const val DAY_HOURS = 24
+
+        const val BASE_URL = "https://www.elbruk.se/"
+        const val TODAY_PRICES_URL = BASE_URL + "timpriser-"
+        const val TOMORROW_PRICES_URL = BASE_URL + "planera-elforbrukning?e="
     }
 
     fun getTodayPricesFromElbruk(user: User) {
         val region = user.region.regionName
         val existingPrices = priceRepository.findAllByRegion(user.region)
         if (existingPrices.isEmpty()) {
-            driver.get("https://www.elbruk.se/timpriser-$region")
+            driver.get(TODAY_PRICES_URL+region)
+            driver.manage().timeouts().implicitlyWait(Duration.ofMillis(LATENCY_MILLIS))
+            submitCookies()
             driver.manage().timeouts().implicitlyWait(Duration.ofMillis(LATENCY_MILLIS))
 
-            submitCookies()
-
             val sizes = getTableSize(
-                "/html/body/div/div[8]/div/div/div/table/thead/tr/th",
-                "/html/body/div/div[8]/div/div/div/table/tbody/tr/td[1]"
+                "/html/body/div[6]/div/div/div/table/thead/tr/th",
+                "/html/body/div[6]/div/div/div/table/tbody/tr/td[1]"
             )
             val elements =
-                getTableElements(sizes["Rows"]!!, sizes["Columns"]!!, "/html/body/div/div[8]/div/div/div/table/tbody")
+                getTableElements(sizes["Rows"]!!, sizes["Columns"]!!, "/html/body/div[6]/div/div/div/table/tbody")
 
-
-            //   driver.close()
             val prices = convertElementsToPrices(elements, sizes["Columns"]!!, Regions.SE3)
             priceRepository.save(prices)
 
@@ -60,12 +63,11 @@ class PriceService(
             }".replace("-", "\\-"), user.chatId
         )
 
-
     }
 
     fun getTomorrowPricesFromElbruck(user: User) {
         val regionNumber = user.region.regionNumber
-        driver.get("https://www.elbruk.se/planera-elforbrukning?e=$regionNumber")
+        driver.get(TOMORROW_PRICES_URL+ regionNumber)
         driver.manage().timeouts().implicitlyWait(Duration.ofMillis(LATENCY_MILLIS))
         submitCookies()
         driver.findElement(By.xpath("//*[@id=\"toggle-tbl\"]")).click()
@@ -90,8 +92,6 @@ class PriceService(
             }".replace("-", "\\-"), 162300020
         )
 
-
-        //   driver.close()
     }
 
 
@@ -123,6 +123,7 @@ class PriceService(
             val submitCookieButton = driver.findElement(By.className("css-47sehv"))
             submitCookieButton.click()
         } catch (e: RuntimeException) {
+            logger.warn("Cookies dialog hasn't appear")
         }
     }
 }
