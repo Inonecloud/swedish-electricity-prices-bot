@@ -1,6 +1,6 @@
 package com.yelmanov.service
 
-import com.yelmanov.domain.Regions
+import com.yelmanov.domain.Price
 import com.yelmanov.domain.User
 import com.yelmanov.repository.PriceRepository
 import com.yelmanov.service.mapper.convertElementsToPrices
@@ -25,17 +25,17 @@ class PriceService(
     companion object {
         const val LATENCY_MILLIS: Long = 300
         const val DAY_HOURS = 24
-
         const val BASE_URL = "https://www.elbruk.se/"
-        const val TODAY_PRICES_URL = BASE_URL + "timpriser-"
-        const val TOMORROW_PRICES_URL = BASE_URL + "planera-elforbrukning?e="
+        const val TODAY_PRICES_URL = "${BASE_URL}timpriser-"
+        const val TOMORROW_PRICES_URL = "${BASE_URL}planera-elforbrukning?e="
     }
 
     fun getTodayPricesFromElbruk(user: User) {
         val region = user.region.regionName
         val existingPrices = priceRepository.findAllByRegion(user.region)
+
         if (existingPrices.isEmpty()) {
-            driver.get(TODAY_PRICES_URL+region)
+            driver.get("$TODAY_PRICES_URL$region")
             driver.manage().timeouts().implicitlyWait(Duration.ofMillis(LATENCY_MILLIS))
             submitCookies()
             driver.manage().timeouts().implicitlyWait(Duration.ofMillis(LATENCY_MILLIS))
@@ -47,27 +47,18 @@ class PriceService(
             val elements =
                 getTableElements(sizes["Rows"]!!, sizes["Columns"]!!, "/html/body/div[6]/div/div/div/table/tbody")
 
-            val prices = convertElementsToPrices(elements, sizes["Columns"]!!, Regions.SE3)
+            val prices = convertElementsToPrices(elements, sizes["Columns"]!!, user.region)
             priceRepository.save(prices)
 
-            botMessageService.sendMessage(
-                "*Prices for ${LocalDate.now()}:*\n${
-                    prices.toString().replace("[", "").replace("]", "").replace(",", "")
-                }".replace("-", "\\-"), user.chatId
-            )
-            return
+            sendFormattedPrices(prices, user.chatId, LocalDate.now().toString())
+        } else {
+            sendFormattedPrices(existingPrices, user.chatId, LocalDate.now().toString())
         }
-        botMessageService.sendMessage(
-            "*Prices for ${LocalDate.now()}:*\n${
-                existingPrices.toString().replace("[", "").replace("]", "").replace(",", "")
-            }".replace("-", "\\-"), user.chatId
-        )
-
     }
 
-    fun getTomorrowPricesFromElbruck(user: User) {
+    fun getTomorrowPricesFromElbruk(user: User) {
         val regionNumber = user.region.regionNumber
-        driver.get(TOMORROW_PRICES_URL+ regionNumber)
+        driver.get(TOMORROW_PRICES_URL + regionNumber)
         driver.manage().timeouts().implicitlyWait(Duration.ofMillis(LATENCY_MILLIS))
         submitCookies()
         driver.findElement(By.xpath("//*[@id=\"toggle-tbl\"]")).click()
@@ -85,13 +76,8 @@ class PriceService(
                 .skip(sizes["Rows"]!!.minus(DAY_HOURS).times(sizes["Columns"]!!).toLong())
                 .toList()
         }
-        val prices = convertElementsToPrices(elements, sizes["Columns"]!!, Regions.SE3)
-        botMessageService.sendMessage(
-            "*Prices for ${LocalDate.now().plusDays(1)}:*\n${
-                prices.toString().replace("[", "").replace("]", "").replace(",", "")
-            }".replace("-", "\\-"), 162300020
-        )
-
+        val prices = convertElementsToPrices(elements, sizes["Columns"]!!, user.region)
+        sendFormattedPrices(prices, user.chatId, LocalDate.now().plusDays(1).toString())
     }
 
 
@@ -116,6 +102,13 @@ class PriceService(
             }
         }
         return elements.toList()
+    }
+
+    private fun sendFormattedPrices(prices: List<Price>, chatId: Long, date: String) {
+        val formattedPrices = prices.joinToString("") { it.toString() }
+        val message = """*Prices for ${date}:*
+$formattedPrices""".replace("-", "\\-")
+        botMessageService.sendMessage(message, chatId, false)
     }
 
     private fun submitCookies() {

@@ -21,7 +21,7 @@ class SendPricesJob(
     @Scheduled(cron = "0 0 14 * * ?")
     fun getPricesForTomorrowBySchedule() {
         userService.getAllUsers().forEach {
-            priceService.getTomorrowPricesFromElbruck(it)
+            priceService.getTomorrowPricesFromElbruk(it)
         }
     }
 }

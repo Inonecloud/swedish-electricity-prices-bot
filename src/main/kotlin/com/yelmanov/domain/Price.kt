@@ -11,7 +11,7 @@ data class Price(
     val region: Regions
 ){
     override fun toString(): String {
-        return "*from* $from *to* $to: __${price}__ Ore \n".replace(".","\\.")
+        return "*from* $from *to* $to: __${price}__ Öre \n".replace(".","\\.")
     }
 }
 
