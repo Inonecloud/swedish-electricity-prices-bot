@@ -8,20 +8,24 @@ import org.springframework.stereotype.Component
 class UserRepositoryImpl : UserRepository {
     val users: MutableList<User> = mutableListOf()
     override fun getUserByChatId(chatId: Long): User {
-       return users.first { it.chatId == chatId }
+        return users.first { it.chatId == chatId }
     }
 
     override fun save(user: User) {
-        for (u: User in users){
-            if(user.chatId == u.chatId){
-                users.remove(u)
-                break
+        synchronized(users) {
+            for (u: User in users) {
+                if (user.chatId == u.chatId) {
+                    users.remove(u)
+                    break
+                }
             }
+            users.add(user)
         }
-        users.add(user)
     }
 
     override fun findAll(): List<User> {
-        return users.toList()
+        synchronized(users) {
+            return users.toList()
+        }
     }
 }
